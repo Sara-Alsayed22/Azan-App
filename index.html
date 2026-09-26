@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Azan App</title>
+<style>
+    
+  *{box-sizing:border-box;}
+ 
+body {
+  background: linear-gradient(135deg, #f7b49d 0%, #f19b80 100%);
+  color: #4a3e3d;
+  font-family: system-ui, -apple-system, sans-serif;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  margin: 0;
+  direction: ltr; 
+}
+
+.prayer-app-container, .container, .conainer {
+  background-color: #ffffff;
+  border: 1px solid #f0e6e1;
+  border-radius: 28px;
+  padding: 24px;
+  width: 90%;
+  max-width: 360px;
+  box-shadow: 0 15px 35px rgba(184, 98, 72, 0.15);
+  box-sizing: border-box;
+}
+
+.prayer-app-container h2, .container h2, .conainer h2 {
+  color: #3b2e2a;
+  font-size: 1.3rem;
+  text-align: center;
+  margin-top: 0;
+  margin-bottom: 20px;
+  font-weight: 700;
+}
+
+.inputs input, input[type="text"] {
+  width: 100%;
+  background-color: #fcf8f5;
+  border: 1px solid #eee2dc;
+  border-radius: 14px;
+  padding: 12px 14px;
+  color: #3b2e2a;
+  font-size: 0.9rem;
+  margin-bottom: 12px; /* مسافة بين حقول الإدخال */
+  box-sizing: border-box;
+  outline: none;
+}
+
+.inputs input::placeholder {
+  color: #b5a49e;
+}
+
+.inputs button, button {
+  width: 100%;
+  background-color: #e28c72;
+  color: #ffffff;
+  border: none;
+  border-radius: 14px;
+  padding: 14px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  margin-bottom: 20px;
+  transition: background-color 0.2s;
+}
+
+.inputs button:hover {
+  background-color: #d1795f;
+}
+
+.next-prayer-card {
+  background-color: #fdf5f2;
+  border: 1px solid #f7e4dd;
+  border-radius: 20px;
+  padding: 18px;
+  margin-bottom: 20px; /* مسافة بين كرت الصلاة القادمة والقائمة */
+  text-align: center;
+  direction: rtl; 
+}
+
+.next-prayer-card h3 {
+  margin: 0 0 8px 0;
+  font-size: 1.05rem;
+  color: #d1795f;
+}
+
+.next-prayer-card p {
+  margin: 4px 0;
+  font-size: 0.9rem;
+  color: #6b5a55;
+}
+
+.timeline-container, .timeline-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 16px; /* زيادة المسافة بين عناصر الجدول */
+  margin-top: 15px;
+}
+
+.timeline-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 4px; /* مسافة إضافية بين كل بوكس وبوكس */
+}
+
+.timeline-indicator {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 24px;
+  position: relative;
+}
+
+.circle {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1.5px solid #ebd2c8;
+  background-color: #fdf8f6;
+  color: #c4a89f;
+  font-size: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+}
+
+.circle.completed {
+  background-color: #e28c72;
+  border-color: #e28c72;
+  color: #ffffff;
+}
+
+.line {
+  width: 2px;
+  height: 40px;
+  background-color: #f3e2dc;
+  position: absolute;
+  top: 22px;
+  z-index: 1;
+}
+
+.prayer-card, .prayer-row {
+  flex: 1;
+  background-color: #fcf8f5;
+  border: 1px solid #f2e6e1;
+  border-radius: 16px;
+  padding: 14px 18px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.prayer-name {
+  color: #3b2e2a;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.prayer-time {
+  color: #d1795f;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+</style>
+</head>
+<body> 
+  <div class="conainer">
+    <h2>Prayer Times</h2>
+    <div class="inputs">
+      <input type="text" id="data" placeholder="DD-MM-YYYY">
+      <input type="text" id="city" placeholder="City">
+      <input type="text" id="country" placeholder="Country code (e.g. GB)">
+      <button onclick="fetchApi()">Get Times</button>
+    </div>
+    <div id="result"></div>
+  </div>
+
+  <script>
+   const API_URL =  "https://api.aladhan.com/v1"
+    function formatTime(time24) {
+      let [hours, minutes] = time24.split(':');
+      let period = hours >= 12 ? 'PM' : 'AM';
+      hours = hours % 12 || 12;
+      return `${hours}:${minutes} ${period}`;
+    }
+
+    
+    function getNextprayer(timings) {
+      const now = new Date();
+      const currentMinutes = now.getHours() * 60 + now.getMinutes();
+      const main = ["Fajr", "Dhuhr", "Asr", "Maghrib", "Isha"];
+
+      for (let key of main) {
+        if (timings[key]) {
+          const [hours, minutes] = timings[key].split(":");
+          const prayerMinutes = parseInt(hours) * 60 + parseInt(minutes);
+
+          if (prayerMinutes > currentMinutes) {
+            const diffMinsTotal = prayerMinutes - currentMinutes;
+            const diffHrs = Math.floor(diffMinsTotal / 60);
+            const diffMins = diffMinsTotal % 60;
+
+            return {
+              name: key,
+              time: timings[key],
+              remaining:` ${diffHrs} ساعة و ${diffMins} دقيقة`
+            };
+          }
+        }
+      }
+
+   
+      const [fajrHours, fajrMinutes] = timings["Fajr"].split(":");
+      const fajrTotalMins = parseInt(fajrHours) * 60 + parseInt(fajrMinutes);
+      const diffMinsTotal = (24 * 60 - currentMinutes) + fajrTotalMins;
+      const diffHrs = Math.floor(diffMinsTotal / 60);
+      const diffMins = diffMinsTotal % 60;
+
+      return {
+        name: "Fajr",
+        time: timings["Fajr"],
+        remaining:` ${diffHrs} ساعة و ${diffMins} دقيقة (غداً)`
+      };
+    }
+
+    const fetchApi = async () => {
+      const date = document.getElementById("data").value;
+      const City = document.getElementById("city").value;
+      const Country = document.getElementById("country").value;
+
+      if (!date || !City || !Country) return;
+
+          const routeByCity = `/timingsByCity/${date}?city=${City}&country=${Country}`;
+
+      try {
+        const res = await fetch(API_URL + routeByCity);
+        const data = await res.json();
+        const timings = data.data.timings;
+        const main = ["Fajr", "Dhuhr", "Asr", "Maghrib", "Isha"];
+        const next = getNextprayer(timings);
+        const now = new Date();
+        const currentMinutes = now.getHours() * 60 + now.getMinutes();
+
+        let html = `
+          <div class="header">${City} - ${date}</div>
+          <div class="next-prayer-card">
+            <h3>الصلاة القادمة: ${next.name}</h3>
+            <p>الوقت: ${formatTime(next.time)}</p>
+            <p>متبقي: ${next.remaining}</p>
+          </div>
+          <div class="prayer-timeline">
+        `;
+
+        main.forEach((key, index) => {
+          if (timings[key]) {
+            const [hours, minutes] = timings[key].split(":");
+            const prayerMinutes = parseInt(hours) * 60 + parseInt(minutes);
+            
+          
+            const isPassed = prayerMinutes <= currentMinutes;
+
+            html += ` 
+              <div class="timeline-row">
+                <div class="timeline-indicator">
+                  <div class="circle ${isPassed ? 'completed' : ''}">
+                    ${isPassed ? '✓' : ''}
+                  </div>
+                  ${index < main.length - 1 ? '<div class="line"></div>' : ''}
+                </div>
+                <div class="prayer-card">
+                  <span class="prayer-name">${key}</span>
+                  <span class="prayer-time">${formatTime(timings[key])}</span>
+                </div>
+              </div>
+               `;
+          }
+        });
+
+        html += `</div>`;
+        document.getElementById("result").innerHTML = html;
+
+      } catch (e) {
+        console.log("Error:", e);
+       
+      }
+   }
+  </script>
+</body>
+</html>
